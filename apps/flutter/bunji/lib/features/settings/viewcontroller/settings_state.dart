@@ -1,3 +1,5 @@
+import 'package:bunji/shared/ai/config/bunji_catalog_config.dart';
+import 'package:bunji/shared/ai/models/bunji_model.dart';
 import 'package:bunji/shared/core/ui.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
@@ -8,9 +10,25 @@ class SettingsState extends Equatable {
 
   // AI & Models
   final String selectedModelId;
+  final List<BunjiModel> availableModels;
+  final List<BunjiModel> installedModels;
+  final String? downloadingModelId;
+  final double downloadProgress;
+  final String? downloadStatusMessage;
+  final String? deletingModelId;
   final String responseStyle;
   final bool reasoningMode;
   final bool streamingResponses;
+
+  // Catalog Diagnostics
+  final bool isRefreshingCatalog;
+  final String? catalogError;
+  final String catalogSource; // 'Remote', 'Cache', 'Bundled'
+  final String catalogVersion;
+  final int catalogSchemaVersion;
+  final String catalogStatus;
+  final DateTime? catalogLastRefresh;
+  final String catalogUrl;
 
   // Privacy & Data
   final bool localAiOnly;
@@ -53,10 +71,24 @@ class SettingsState extends Equatable {
   const SettingsState({
     required this.ui,
     this.searchQuery = '',
-    this.selectedModelId = 'qwen3_0_6b',
+    this.selectedModelId = 'qwen3_0_6b_q4_0',
+    this.availableModels = const [],
+    this.installedModels = const [],
+    this.downloadingModelId,
+    this.downloadProgress = 0.0,
+    this.downloadStatusMessage,
+    this.deletingModelId,
     this.responseStyle = 'Balanced',
     this.reasoningMode = false,
     this.streamingResponses = true,
+    this.isRefreshingCatalog = false,
+    this.catalogError,
+    this.catalogSource = 'Bundled',
+    this.catalogVersion = '2026-09-14',
+    this.catalogSchemaVersion = 2,
+    this.catalogStatus = 'Valid',
+    this.catalogLastRefresh,
+    this.catalogUrl = BunjiCatalogConfig.remoteUrl,
     this.localAiOnly = true,
     this.allowInternetForDownloads = true,
     this.sendDiagnostics = false,
@@ -80,18 +112,32 @@ class SettingsState extends Equatable {
     this.hapticFeedback = true,
     this.soundEffects = false,
     this.confirmBeforeDeleting = true,
-    this.appLanguage = 'English (US)',
-    this.aiLanguage = 'Auto-detect',
+    this.appLanguage = 'en',
+    this.aiLanguage = 'en',
     this.developerMode = false,
   });
 
   const SettingsState.initial()
       : ui = const UI(),
         searchQuery = '',
-        selectedModelId = 'qwen3_0_6b',
+        selectedModelId = 'qwen3_0_6b_q4_0',
+        availableModels = const [],
+        installedModels = const [],
+        downloadingModelId = null,
+        downloadProgress = 0.0,
+        downloadStatusMessage = null,
+        deletingModelId = null,
         responseStyle = 'Balanced',
         reasoningMode = false,
         streamingResponses = true,
+        isRefreshingCatalog = false,
+        catalogError = null,
+        catalogSource = 'Bundled',
+        catalogVersion = '2026-09-14',
+        catalogSchemaVersion = 2,
+        catalogStatus = 'Valid',
+        catalogLastRefresh = null,
+        catalogUrl = BunjiCatalogConfig.remoteUrl,
         localAiOnly = true,
         allowInternetForDownloads = true,
         sendDiagnostics = false,
@@ -115,8 +161,8 @@ class SettingsState extends Equatable {
         hapticFeedback = true,
         soundEffects = false,
         confirmBeforeDeleting = true,
-        appLanguage = 'English (US)',
-        aiLanguage = 'Auto-detect',
+        appLanguage = 'en',
+        aiLanguage = 'en',
         developerMode = false;
 
   ThemeMode get flutterThemeMode {
@@ -135,9 +181,26 @@ class SettingsState extends Equatable {
     UI? ui,
     String? searchQuery,
     String? selectedModelId,
+    List<BunjiModel>? availableModels,
+    List<BunjiModel>? installedModels,
+    String? downloadingModelId,
+    bool clearDownloadingModelId = false,
+    double? downloadProgress,
+    String? downloadStatusMessage,
+    bool clearDownloadStatus = false,
+    String? deletingModelId,
+    bool clearDeletingModelId = false,
     String? responseStyle,
     bool? reasoningMode,
     bool? streamingResponses,
+    bool? isRefreshingCatalog,
+    String? catalogError,
+    String? catalogSource,
+    String? catalogVersion,
+    int? catalogSchemaVersion,
+    String? catalogStatus,
+    DateTime? catalogLastRefresh,
+    String? catalogUrl,
     bool? localAiOnly,
     bool? allowInternetForDownloads,
     bool? sendDiagnostics,
@@ -169,9 +232,29 @@ class SettingsState extends Equatable {
       ui: ui ?? this.ui,
       searchQuery: searchQuery ?? this.searchQuery,
       selectedModelId: selectedModelId ?? this.selectedModelId,
+      availableModels: availableModels ?? this.availableModels,
+      installedModels: installedModels ?? this.installedModels,
+      downloadingModelId: clearDownloadingModelId
+          ? null
+          : (downloadingModelId ?? this.downloadingModelId),
+      downloadProgress: downloadProgress ?? this.downloadProgress,
+      downloadStatusMessage: clearDownloadStatus
+          ? null
+          : (downloadStatusMessage ?? this.downloadStatusMessage),
+      deletingModelId: clearDeletingModelId
+          ? null
+          : (deletingModelId ?? this.deletingModelId),
       responseStyle: responseStyle ?? this.responseStyle,
       reasoningMode: reasoningMode ?? this.reasoningMode,
       streamingResponses: streamingResponses ?? this.streamingResponses,
+      isRefreshingCatalog: isRefreshingCatalog ?? this.isRefreshingCatalog,
+      catalogError: catalogError,
+      catalogSource: catalogSource ?? this.catalogSource,
+      catalogVersion: catalogVersion ?? this.catalogVersion,
+      catalogSchemaVersion: catalogSchemaVersion ?? this.catalogSchemaVersion,
+      catalogStatus: catalogStatus ?? this.catalogStatus,
+      catalogLastRefresh: catalogLastRefresh ?? this.catalogLastRefresh,
+      catalogUrl: catalogUrl ?? this.catalogUrl,
       localAiOnly: localAiOnly ?? this.localAiOnly,
       allowInternetForDownloads:
           allowInternetForDownloads ?? this.allowInternetForDownloads,
@@ -210,9 +293,23 @@ class SettingsState extends Equatable {
         ui,
         searchQuery,
         selectedModelId,
+        availableModels,
+        installedModels,
+        downloadingModelId,
+        downloadProgress,
+        downloadStatusMessage,
+        deletingModelId,
         responseStyle,
         reasoningMode,
         streamingResponses,
+        isRefreshingCatalog,
+        catalogError,
+        catalogSource,
+        catalogVersion,
+        catalogSchemaVersion,
+        catalogStatus,
+        catalogLastRefresh,
+        catalogUrl,
         localAiOnly,
         allowInternetForDownloads,
         sendDiagnostics,

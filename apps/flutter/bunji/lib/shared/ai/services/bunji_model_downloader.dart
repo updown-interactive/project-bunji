@@ -68,13 +68,31 @@ class BunjiModelDownloader {
   /// Target file path for the completed model.
   Future<File> getTargetModelFile(BunjiModel model) async {
     final dir = await getModelsDirectory();
-    return File(p.join(dir.path, '${model.id}.gguf'));
+    final modelFolder = Directory(p.join(dir.path, model.id));
+    if (!await modelFolder.exists()) {
+      await modelFolder.create(recursive: true);
+    }
+    final target = File(p.join(modelFolder.path, model.fileName));
+    final legacy = File(p.join(dir.path, '${model.id}.gguf'));
+    if (await legacy.exists() && !await target.exists()) {
+      return legacy;
+    }
+    return target;
   }
 
   /// Partial download file path (`.part`).
   Future<File> getPartModelFile(BunjiModel model) async {
     final dir = await getModelsDirectory();
-    return File(p.join(dir.path, '${model.id}.gguf.part'));
+    final modelFolder = Directory(p.join(dir.path, model.id));
+    if (!await modelFolder.exists()) {
+      await modelFolder.create(recursive: true);
+    }
+    final targetPart = File(p.join(modelFolder.path, '${model.fileName}.part'));
+    final legacyPart = File(p.join(dir.path, '${model.id}.gguf.part'));
+    if (await legacyPart.exists() && !await targetPart.exists()) {
+      return legacyPart;
+    }
+    return targetPart;
   }
 
   /// Initiates or resumes downloading the specified [model].

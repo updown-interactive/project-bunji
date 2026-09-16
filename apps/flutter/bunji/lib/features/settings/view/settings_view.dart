@@ -83,20 +83,7 @@ class _SettingsViewContent extends StatelessWidget {
                     ]))
                       _buildProfileCard(context, controller, state, cs, tt),
 
-                    // 2. 🧠 AI & Models (Most Prominent)
-                    if (_matchesQuery(q, [
-                      'ai',
-                      'models',
-                      'qwen',
-                      'mobilellm',
-                      'inference',
-                      'creativity',
-                      'reasoning',
-                      'style',
-                    ]))
-                      _buildAiModelsCard(context, controller, state, cs, tt),
-
-                    // 3. 🔒 Privacy & Data (Prominent)
+                    // 2. 🔒 Privacy & Data (Prominent)
                     if (_matchesQuery(q, [
                       'privacy',
                       'data',
@@ -305,221 +292,7 @@ class _SettingsViewContent extends StatelessWidget {
     );
   }
 
-  // 2. 🧠 AI & Models Card
-  Widget _buildAiModelsCard(
-    BuildContext context,
-    SettingsViewController controller,
-    SettingsState state,
-    ColorScheme cs,
-    TextTheme tt,
-  ) {
-    final models = [
-      {
-        'id': 'qwen3_0_6b',
-        'name': 'Qwen3 0.6B',
-        'tag': 'Recommended',
-        'size': '494 MB',
-        'desc':
-            'Ultra fast, lightweight, and battery-friendly for everyday tasks',
-      },
-      {
-        'id': 'mobilellm_r1_5_950m',
-        'name': 'MobileLLM-R1.5 950M',
-        'tag': 'Reasoning',
-        'size': '620 MB',
-        'desc':
-            'Optimized for step-by-step logic, code, and structured analysis',
-      },
-      {
-        'id': 'qwen3_1_7b',
-        'name': 'Qwen3 1.7B',
-        'tag': 'Deep Thinking',
-        'size': '1.42 GB',
-        'desc': 'Maximum intelligence, nuanced creative writing, and knowledge',
-      },
-    ];
-
-    return _buildSectionCard(
-      context: context,
-      icon: Icons.psychology_outlined,
-      label: .aiAndModels,
-      titleFallback: 'AI & Models',
-      isProminent: true,
-      trailing: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: cs.primary.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: cs.primary.withValues(alpha: 0.5),
-            width: 0.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: cs.primary,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'ON-DEVICE',
-              style: tt.labelSmall?.copyWith(
-                color: cs.primary,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-      children: [
-        Text(
-          'Active Model',
-          style: tt.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: cs.onSurface,
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // Model Cards
-        ...models.map((m) {
-          final isSelected = state.selectedModelId == m['id'];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () => controller.updateSelectedModel(m['id']!),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected
-                        ? cs.primary
-                        : cs.outline.withValues(alpha: 0.15),
-                    width: isSelected ? 1.5 : 0.5,
-                  ),
-                  color: isSelected
-                      ? cs.primary.withValues(alpha: 0.08)
-                      : cs.surface.withValues(alpha: 0.4),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      isSelected
-                          ? Icons.radio_button_checked_rounded
-                          : Icons.radio_button_off_rounded,
-                      color: isSelected
-                          ? cs.primary
-                          : cs.onSurface.withValues(alpha: 0.4),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                m['name']!,
-                                style: tt.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: cs.onSurface,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: cs.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  m['size']!,
-                                  style: tt.labelSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: cs.onSurface.withValues(alpha: 0.7),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            m['desc']!,
-                            style: tt.bodySmall?.copyWith(
-                              color: cs.onSurface.withValues(alpha: 0.6),
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-
-        const SizedBox(height: 8),
-        _buildDivider(cs),
-
-        // Response Style
-        Text(
-          'Response Style',
-          style: tt.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: cs.onSurface,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildSegmentedSelector<String>(
-          options: const ['Balanced', 'Concise', 'Detailed'],
-          selected: state.responseStyle,
-          labelBuilder: (s) => s,
-          onSelected: controller.updateResponseStyle,
-          cs: cs,
-          tt: tt,
-        ),
-
-        const SizedBox(height: 12),
-        _buildSwitchRow(
-          title: 'Reasoning Mode',
-          subtitle:
-              'Enable visible step-by-step thinking for analytical questions',
-          value: state.reasoningMode,
-          onChanged: controller.toggleReasoningMode,
-          cs: cs,
-          tt: tt,
-        ),
-        _buildSwitchRow(
-          title: 'Streaming Tokens',
-          subtitle:
-              'Show words immediately as the neural network generates them',
-          value: state.streamingResponses,
-          onChanged: controller.toggleStreamingResponses,
-          cs: cs,
-          tt: tt,
-        ),
-      ],
-    );
-  }
-
-  // 3. 🔒 Privacy & Data Card
+  // 2. 🔒 Privacy & Data Card
   Widget _buildPrivacyDataCard(
     BuildContext context,
     SettingsViewController controller,
@@ -1066,7 +839,151 @@ class _SettingsViewContent extends StatelessWidget {
           cs: cs,
           tt: tt,
         ),
+        if (state.developerMode) ...[
+          const SizedBox(height: 12),
+          _buildDivider(cs),
+          const SizedBox(height: 12),
+          _buildDeveloperCatalogCard(context, controller, state, cs, tt),
+        ],
       ],
+    );
+  }
+
+  Widget _buildDeveloperCatalogCard(
+    BuildContext context,
+    SettingsViewController controller,
+    SettingsState state,
+    ColorScheme cs,
+    TextTheme tt,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cs.outline.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.terminal_rounded, size: 20, color: cs.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Bunji Model Catalog',
+                style: tt.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: cs.onSurface,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  state.catalogSource.toUpperCase(),
+                  style: tt.labelSmall?.copyWith(
+                    color: cs.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildDiagRow('Source', state.catalogSource, cs, tt),
+          _buildDiagRow('URL', state.catalogUrl, cs, tt, isMonospace: true),
+          _buildDiagRow('Catalog version', state.catalogVersion, cs, tt),
+          _buildDiagRow('Schema', '${state.catalogSchemaVersion}', cs, tt),
+          _buildDiagRow(
+            'Last refresh',
+            state.catalogLastRefresh != null
+                ? '${state.catalogLastRefresh!.hour.toString().padLeft(2, '0')}:${state.catalogLastRefresh!.minute.toString().padLeft(2, '0')}'
+                : 'Not refreshed yet',
+            cs,
+            tt,
+          ),
+          _buildDiagRow('Models', '${state.availableModels.length}', cs, tt),
+          _buildDiagRow('Installed', '${state.installedModels.length}', cs, tt),
+          _buildDiagRow('Catalog status', state.catalogStatus, cs, tt),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: state.isRefreshingCatalog ? null : controller.refreshCatalog,
+                icon: state.isRefreshingCatalog
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Refresh catalog'),
+              ),
+              OutlinedButton.icon(
+                onPressed: controller.clearCatalogCache,
+                icon: const Icon(Icons.delete_sweep_outlined, size: 16),
+                label: const Text('Clear catalog cache'),
+              ),
+              OutlinedButton.icon(
+                onPressed: controller.loadBundledCatalog,
+                icon: const Icon(Icons.inventory_2_outlined, size: 16),
+                label: const Text('Load bundled catalog'),
+              ),
+              OutlinedButton.icon(
+                onPressed: controller.validateCatalog,
+                icon: const Icon(Icons.verified_outlined, size: 16),
+                label: const Text('Validate catalog'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiagRow(
+    String label,
+    String value,
+    ColorScheme cs,
+    TextTheme tt, {
+    bool isMonospace = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: tt.bodySmall?.copyWith(
+                color: cs.onSurface.withValues(alpha: 0.6),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: (isMonospace ? tt.labelSmall : tt.bodySmall)?.copyWith(
+                color: cs.onSurface,
+                fontWeight: FontWeight.w600,
+                fontFamily: isMonospace ? 'monospace' : null,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

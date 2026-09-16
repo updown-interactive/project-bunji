@@ -63,6 +63,47 @@ class FakeTestDatabaseService implements DatabaseService {
   Future<void> saveUserSettings(UserSettingsCompanion settings) async {}
 
   @override
+  Future<ChatSession?> getChatSession(String id) async => null;
+
+  @override
+  Stream<List<ChatSession>> watchRecentChatSessions({int limit = 50}) =>
+      Stream.value([]);
+
+  @override
+  Future<List<ChatSession>> getRecentChatSessions({int limit = 50}) async => [];
+
+  @override
+  Future<void> saveChatSession(ChatSessionsCompanion session) async {}
+
+  @override
+  Future<void> updateChatSessionTitle(String id, String title) async {}
+
+  @override
+  Future<void> updateChatSessionCover(String id, String coverImagePath) async {}
+
+  @override
+  Future<void> updateChatSessionPin(String id, bool isPinned) async {}
+
+  @override
+  Future<void> deleteChatSession(String id) async {}
+
+  @override
+  Future<List<DbChatMessage>> getChatMessages(String chatId) async => [];
+
+  @override
+  Stream<List<DbChatMessage>> watchChatMessages(String chatId) =>
+      Stream.value([]);
+
+  @override
+  Future<void> saveChatMessage(ChatMessagesCompanion message) async {}
+
+  @override
+  Future<DbChatMessage?> getLatestChatMessage(String chatId) async => null;
+
+  @override
+  Future<DbChatMessage?> getLatestAiChatMessage(String chatId) async => null;
+
+  @override
   Future<void> close() async {}
 }
 
@@ -121,7 +162,7 @@ void main() {
 
     // 1. Verify model titles are visible
     expect(find.text('Qwen3 0.6B'), findsOneWidget);
-    expect(find.text('MobileLLM-R1.5 950M'), findsOneWidget);
+    expect(find.text('Gemma 3 1B'), findsOneWidget);
     expect(find.text('Qwen3 1.7B'), findsOneWidget);
 
     // 2. Verify NO emojis are rendered
@@ -130,8 +171,8 @@ void main() {
     expect(find.textContaining('✨'), findsNothing);
 
     // 3. Verify that initially (collapsed/show less details), detailed bullet highlights are hidden
-    expect(find.text('Uses less storage'), findsNothing);
-    expect(find.text('Better reasoning'), findsNothing);
+    expect(find.text('low_memory'), findsNothing);
+    expect(find.text('balanced'), findsNothing);
 
     // 4. Tap the first model (Qwen3 0.6B) to expand it
     await tester.tap(find.text('Qwen3 0.6B'));
@@ -139,29 +180,29 @@ void main() {
 
     // Now Qwen3 0.6B details should be visible!
     expect(
-        find.text('Small and fast for everyday conversations.'), findsOneWidget);
-    expect(find.text('Uses less storage'), findsOneWidget);
-    expect(find.text('Fast responses'), findsOneWidget);
+        find.text('Small and fast model for everyday conversations and tasks.'), findsOneWidget);
+    expect(find.text('low_memory'), findsOneWidget);
+    expect(find.text('fast'), findsOneWidget);
 
-    // MobileLLM details should still be collapsed
-    expect(find.text('Better reasoning'), findsNothing);
+    // Gemma 3 1B details should still be collapsed
+    expect(find.text('balanced'), findsNothing);
 
-    // 5. Tap MobileLLM-R1.5 950M -> it should expand, and Qwen3 should collapse
-    await tester.tap(find.text('MobileLLM-R1.5 950M'));
+    // 5. Tap Gemma 3 1B -> it should expand, and Qwen3 should collapse
+    await tester.tap(find.text('Gemma 3 1B'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Better reasoning'), findsOneWidget);
+    expect(find.text('balanced'), findsOneWidget);
     expect(
         find.text(
-            'More capable reasoning while remaining small enough for modern phones.'),
+            'A stronger general-purpose model with a good balance of quality and mobile performance.'),
         findsOneWidget);
     // Qwen3 0.6B details should now be collapsed
-    expect(find.text('Uses less storage'), findsNothing);
+    expect(find.text('low_memory'), findsNothing);
 
-    // 6. Tap MobileLLM-R1.5 950M again -> collapses
-    await tester.tap(find.text('MobileLLM-R1.5 950M'));
+    // 6. Tap Gemma 3 1B again -> collapses
+    await tester.tap(find.text('Gemma 3 1B'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Better reasoning'), findsNothing);
+    expect(find.text('balanced'), findsNothing);
   });
 }

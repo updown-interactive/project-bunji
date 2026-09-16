@@ -1,10 +1,28 @@
 import 'package:equatable/equatable.dart';
+import 'catalog/model_catalog.dart';
+
+export 'catalog/model_catalog.dart';
 
 /// Semantic tiers for Bunji local models.
 enum BunjiModelTier {
   fast,
+  balanced,
   reasoning,
-  quality,
+  quality;
+
+  static BunjiModelTier fromString(String? val) {
+    switch (val?.toLowerCase().trim()) {
+      case 'balanced':
+        return BunjiModelTier.balanced;
+      case 'reasoning':
+        return BunjiModelTier.reasoning;
+      case 'quality':
+        return BunjiModelTier.quality;
+      case 'fast':
+      default:
+        return BunjiModelTier.fast;
+    }
+  }
 }
 
 extension BunjiModelTierX on BunjiModelTier {
@@ -12,6 +30,8 @@ extension BunjiModelTierX on BunjiModelTier {
     switch (this) {
       case BunjiModelTier.fast:
         return 'Fast';
+      case BunjiModelTier.balanced:
+        return 'Balanced';
       case BunjiModelTier.reasoning:
         return 'Reasoning';
       case BunjiModelTier.quality:
@@ -23,6 +43,8 @@ extension BunjiModelTierX on BunjiModelTier {
     switch (this) {
       case BunjiModelTier.fast:
         return 'fast';
+      case BunjiModelTier.balanced:
+        return 'balanced';
       case BunjiModelTier.reasoning:
         return 'reasoning';
       case BunjiModelTier.quality:
@@ -47,44 +69,264 @@ enum BunjiModelDownloadState {
 /// Centralized model metadata representation for Bunji on-device models.
 class BunjiModel extends Equatable {
   final String id;
-  final String displayName;
-  final String description;
-
-  final String repository;
-  final String revision;
-  final String filename;
-
-  final int parameterCount;
-  final int fileSizeBytes;
-
-  final String sha256;
-
+  final BunjiModelStatus status;
+  final String visibility;
+  final String name;
+  final String provider;
   final BunjiModelTier tier;
-
-  final int minimumRecommendedRamMb;
-
+  final String description;
+  final String? shortDescription;
   final bool recommended;
+  final List<String> tags;
+  final String parameters;
+  final String quantization;
+  final String format;
+  final String fileName;
+  final int fileSizeBytes;
+  final String? fileSizeDisplay;
+  final int minimumRecommendedRamMb;
+  final int contextLength;
+  final String architecture;
+  final String license;
+  final String? licenseUrl;
 
-  final List<String> highlights;
+  final HuggingFaceMetadata huggingFace;
+  final ModelIntegrity integrity;
+  final ModelRuntime runtime;
+  final ModelAvailability availability;
+  final bool isActive;
 
   const BunjiModel({
     required this.id,
-    required this.displayName,
-    required this.description,
-    required this.repository,
-    required this.revision,
-    required this.filename,
-    required this.parameterCount,
-    required this.fileSizeBytes,
-    required this.sha256,
+    this.status = BunjiModelStatus.active,
+    this.visibility = 'public',
+    required this.name,
+    this.provider = 'Bunji',
     required this.tier,
-    required this.minimumRecommendedRamMb,
+    required this.description,
+    this.shortDescription,
     this.recommended = false,
-    this.highlights = const [],
+    this.tags = const [],
+    this.parameters = '',
+    this.quantization = 'Q4_0',
+    this.format = 'GGUF',
+    required this.fileName,
+    required this.fileSizeBytes,
+    this.fileSizeDisplay,
+    required this.minimumRecommendedRamMb,
+    this.contextLength = 32768,
+    this.architecture = 'generic',
+    this.license = 'Apache-2.0',
+    this.licenseUrl,
+    required this.huggingFace,
+    required this.integrity,
+    this.runtime = const ModelRuntime(name: 'llama.cpp'),
+    this.availability = const ModelAvailability(),
+    this.isActive = false,
   });
 
-  /// User-friendly formatted size string, e.g. "~450 MB" or "~1.2 GB".
+  /// Backward-compatibility constructor supporting legacy field names.
+  factory BunjiModel.legacy({
+    required String id,
+    required String displayName,
+    required String description,
+    required String repository,
+    required String revision,
+    required String filename,
+    required int parameterCount,
+    required int fileSizeBytes,
+    required String sha256,
+    required BunjiModelTier tier,
+    required int minimumRecommendedRamMb,
+    bool recommended = false,
+    List<String> highlights = const [],
+    BunjiModelStatus status = BunjiModelStatus.active,
+  }) {
+    return BunjiModel(
+      id: id,
+      status: status,
+      name: displayName,
+      description: description,
+      tier: tier,
+      recommended: recommended,
+      tags: highlights,
+      parameters: '${(parameterCount / 1000000000).toStringAsFixed(1)}B',
+      fileName: filename,
+      fileSizeBytes: fileSizeBytes,
+      minimumRecommendedRamMb: minimumRecommendedRamMb,
+      huggingFace: HuggingFaceMetadata(
+        repository: repository,
+        revision: revision,
+        downloadUrl:
+            'https://huggingface.co/$repository/resolve/$revision/$filename?download=true',
+      ),
+      integrity: ModelIntegrity(sha256: sha256),
+    );
+  }
+
+  /// Strict validation and deserialization from Catalog JSON per Section 20.
+  factory BunjiModel.fromJson(Map<String, dynamic> json) {
+    final id = json['id'] as String?;
+    final statusStr = json['status'] as String?;
+    final name = (json['name'] ?? json['displayName']) as String?;
+    final fileName = (json['fileName'] ?? json['filename']) as String?;
+    final fileSizeBytes = json['fileSizeBytes'] is num
+        ? (json['fileSizeBytes'] as num).toInt()
+        : null;
+
+    if (id == null || id.trim().isEmpty) {
+      throw const FormatException('Required field "id" is missing or empty');
+    }
+    if (statusStr == null || statusStr.trim().isEmpty) {
+      throw const FormatException('Required field "status" is missing or empty');
+    }
+    if (name == null || name.trim().isEmpty) {
+      throw const FormatException('Required field "name" is missing or empty');
+    }
+    if (fileName == null || fileName.trim().isEmpty) {
+      throw const FormatException('Required field "fileName" is missing or empty');
+    }
+    if (fileSizeBytes == null || fileSizeBytes <= 0) {
+      throw const FormatException('Required field "fileSizeBytes" is missing or non-positive');
+    }
+
+    final hfRaw = json['huggingFace'];
+    HuggingFaceMetadata hf;
+    if (hfRaw is Map<String, dynamic>) {
+      hf = HuggingFaceMetadata.fromJson(hfRaw);
+    } else if (json['repository'] != null) {
+      final repo = json['repository'] as String;
+      final rev = json['revision'] as String? ?? 'main';
+      hf = HuggingFaceMetadata(
+        repository: repo,
+        revision: rev,
+        downloadUrl: json['downloadUrl'] as String? ??
+            'https://huggingface.co/$repo/resolve/$rev/$fileName?download=true',
+      );
+    } else {
+      throw const FormatException('Required field "huggingFace" is missing');
+    }
+
+    final integrityRaw = json['integrity'];
+    ModelIntegrity integrity;
+    if (integrityRaw is Map<String, dynamic>) {
+      integrity = ModelIntegrity.fromJson(integrityRaw);
+    } else if (json['sha256'] != null) {
+      integrity = ModelIntegrity(sha256: json['sha256'] as String);
+    } else {
+      throw const FormatException('Required field "integrity" is missing');
+    }
+
+    final runtimeRaw = json['runtime'];
+    ModelRuntime runtime;
+    if (runtimeRaw is Map<String, dynamic>) {
+      runtime = ModelRuntime.fromJson(runtimeRaw);
+    } else {
+      runtime = const ModelRuntime(name: 'llama.cpp');
+    }
+
+    final availRaw = json['availability'];
+    ModelAvailability availability;
+    if (availRaw is Map<String, dynamic>) {
+      availability = ModelAvailability.fromJson(availRaw);
+    } else {
+      availability = const ModelAvailability();
+    }
+
+    final rawTags = json['tags'] ?? json['highlights'];
+    final tags = rawTags is List
+        ? rawTags.map((e) => e.toString()).toList()
+        : <String>[];
+
+    return BunjiModel(
+      id: id,
+      status: BunjiModelStatus.fromString(statusStr),
+      visibility: json['visibility'] as String? ?? 'public',
+      name: name,
+      provider: json['provider'] as String? ?? 'Bunji',
+      tier: BunjiModelTier.fromString(json['tier'] as String?),
+      description: json['description'] as String? ?? '',
+      shortDescription: json['shortDescription'] as String?,
+      recommended: json['recommended'] as bool? ?? false,
+      tags: tags,
+      parameters: json['parameters'] as String? ?? '',
+      quantization: json['quantization'] as String? ?? 'Q4_0',
+      format: json['format'] as String? ?? 'GGUF',
+      fileName: fileName,
+      fileSizeBytes: fileSizeBytes,
+      fileSizeDisplay: json['fileSizeDisplay'] as String?,
+      minimumRecommendedRamMb:
+          (json['minimumRecommendedRamMb'] as num?)?.toInt() ?? 2048,
+      contextLength: (json['contextLength'] as num?)?.toInt() ?? 32768,
+      architecture: json['architecture'] as String? ?? 'generic',
+      license: json['license'] as String? ?? 'Apache-2.0',
+      licenseUrl: json['licenseUrl'] as String?,
+      huggingFace: hf,
+      integrity: integrity,
+      runtime: runtime,
+      availability: availability,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'status': status.name,
+        'visibility': visibility,
+        'name': name,
+        'provider': provider,
+        'tier': tier.name,
+        'description': description,
+        'shortDescription': shortDescription,
+        'recommended': recommended,
+        'tags': tags,
+        'parameters': parameters,
+        'quantization': quantization,
+        'format': format,
+        'fileName': fileName,
+        'fileSizeBytes': fileSizeBytes,
+        'fileSizeDisplay': fileSizeDisplay,
+        'minimumRecommendedRamMb': minimumRecommendedRamMb,
+        'contextLength': contextLength,
+        'architecture': architecture,
+        'license': license,
+        'licenseUrl': licenseUrl,
+        'huggingFace': huggingFace.toJson(),
+        'integrity': integrity.toJson(),
+        'runtime': runtime.toJson(),
+        'availability': availability.toJson(),
+      };
+
+  // Backward compatibility getters
+  String get displayName => name;
+  String get filename => fileName;
+  String get sha256 => integrity.sha256;
+  String get repository => huggingFace.repository;
+  String get revision => huggingFace.revision;
+  String get downloadUrl => huggingFace.downloadUrl;
+  List<String> get highlights => tags;
+  bool get isDeprecated => status == BunjiModelStatus.deprecated;
+  bool get isDisabled => status == BunjiModelStatus.disabled;
+  bool get isRetired => status == BunjiModelStatus.retired;
+
+  /// Parameter count as integer for comparison algorithms.
+  int get parameterCount {
+    final clean = parameters.replaceAll(RegExp(r'[^0-9.]'), '');
+    final numVal = double.tryParse(clean);
+    if (numVal != null) {
+      if (parameters.toUpperCase().contains('B')) {
+        return (numVal * 1000000000).toInt();
+      } else if (parameters.toUpperCase().contains('M')) {
+        return (numVal * 1000000).toInt();
+      }
+    }
+    return 1000000000;
+  }
+
+  /// Formatted size string, e.g. "429 MB" or "~1.2 GB".
   String get formattedSize {
+    if (fileSizeDisplay != null && fileSizeDisplay!.isNotEmpty) {
+      return fileSizeDisplay!;
+    }
     if (fileSizeBytes >= 1024 * 1024 * 1024) {
       final gb = fileSizeBytes / (1024 * 1024 * 1024);
       return '~${gb.toStringAsFixed(1)} GB';
@@ -93,97 +335,120 @@ class BunjiModel extends Equatable {
     return '~${mb.toStringAsFixed(0)} MB';
   }
 
-  /// Construct the official download URL from repository, revision, and filename.
-  String get downloadUrl {
-    return 'https://huggingface.co/$repository/resolve/$revision/$filename?download=true';
-  }
-
   @override
   List<Object?> get props => [
         id,
-        displayName,
-        description,
-        repository,
-        revision,
-        filename,
-        parameterCount,
-        fileSizeBytes,
-        sha256,
+        status,
+        visibility,
+        name,
+        provider,
         tier,
-        minimumRecommendedRamMb,
+        description,
+        shortDescription,
         recommended,
-        highlights,
+        tags,
+        parameters,
+        quantization,
+        format,
+        fileName,
+        fileSizeBytes,
+        fileSizeDisplay,
+        minimumRecommendedRamMb,
+        contextLength,
+        architecture,
+        license,
+        licenseUrl,
+        huggingFace,
+        integrity,
+        runtime,
+        availability,
+        isActive,
       ];
 
-  /// Standard predefined Bunji models presented in onboarding.
+  /// Predefined default Bunji models for offline fallback / compatibility.
   static const List<BunjiModel> availableModels = [
-    // Option 1 — Fast
     BunjiModel(
-      id: 'qwen3_0_6b',
-      displayName: 'Qwen3 0.6B',
-      description: 'Small and fast for everyday conversations.',
-      repository: 'Qwen/Qwen2.5-0.5B-Instruct-GGUF',
-      revision: 'main',
-      filename: 'qwen3-0.6b-instruct-q4_k_m.gguf',
-      parameterCount: 600000000,
-      fileSizeBytes: 461373440, // ~440 MB
-      sha256:
-          'a6c5b9e0f3d2a1c4b8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5',
+      id: 'qwen3_0_6b_q4_0',
+      status: BunjiModelStatus.active,
+      name: 'Qwen3 0.6B',
+      provider: 'Qwen',
       tier: BunjiModelTier.fast,
-      minimumRecommendedRamMb: 2048,
+      description: 'Small and fast model for everyday conversations and tasks.',
+      shortDescription: 'Fast and lightweight for everyday use.',
       recommended: true,
-      highlights: [
-        'Fast responses',
-        'Uses less storage',
-        'Lower memory requirements',
-        'Great for everyday tasks',
-      ],
+      tags: ['fast', 'mobile', 'everyday', 'low_memory'],
+      parameters: '0.6B',
+      quantization: 'Q4_0',
+      format: 'GGUF',
+      fileName: 'Qwen3-0.6B-Q4_0.gguf',
+      fileSizeBytes: 429000000,
+      fileSizeDisplay: '429 MB',
+      minimumRecommendedRamMb: 2048,
+      huggingFace: HuggingFaceMetadata(
+        repository: 'ggml-org/Qwen3-0.6B-GGUF',
+        revision: 'main',
+        downloadUrl:
+            'https://huggingface.co/ggml-org/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_0.gguf?download=true',
+      ),
+      integrity: ModelIntegrity(
+        sha256: 'da2572f16c06133561ce56accaa822216f2391ef4d37fba427801cd6736417d4',
+      ),
     ),
-
-    // Option 2 — Reasoning
     BunjiModel(
-      id: 'mobilellm_r1_5_950m',
-      displayName: 'MobileLLM-R1.5 950M',
+      id: 'gemma3_1b_it_q4_k_m',
+      status: BunjiModelStatus.active,
+      name: 'Gemma 3 1B',
+      provider: 'Google',
+      tier: BunjiModelTier.balanced,
       description:
-          'More capable reasoning while remaining small enough for modern phones.',
-      repository: 'facebook/MobileLLM-R1.5-950M-GGUF',
-      revision: 'main',
-      filename: 'mobilellm-r1.5-950m-q4_k_m.gguf',
-      parameterCount: 950000000,
-      fileSizeBytes: 713031680, // ~680 MB
-      sha256:
-          'b7d6e5f4a3b2c1d0e9f8a7b6c5a6c5b9e0f3d2a1c4b8e7f6a5b4c3d2e1f0a9b8',
-      tier: BunjiModelTier.reasoning,
+          'A stronger general-purpose model with a good balance of quality and mobile performance.',
+      shortDescription: 'Balanced quality and performance.',
+      recommended: false,
+      tags: ['balanced', 'mobile', 'general'],
+      parameters: '1.0B',
+      quantization: 'Q4_K_M',
+      format: 'GGUF',
+      fileName: 'gemma-3-1b-it-Q4_K_M.gguf',
+      fileSizeBytes: 806000000,
+      fileSizeDisplay: '806 MB',
       minimumRecommendedRamMb: 3072,
-      recommended: false,
-      highlights: [
-        'Better reasoning',
-        'Good balance of speed and intelligence',
-        'Still designed for mobile use',
-      ],
+      huggingFace: HuggingFaceMetadata(
+        repository: 'ggml-org/gemma-3-1b-it-GGUF',
+        revision: 'main',
+        downloadUrl:
+            'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf?download=true',
+      ),
+      integrity: ModelIntegrity(
+        sha256: '8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135',
+      ),
     ),
-
-    // Option 3 — Quality
     BunjiModel(
-      id: 'qwen3_1_7b',
-      displayName: 'Qwen3 1.7B',
-      description: 'The most capable Bunji model for supported devices.',
-      repository: 'Qwen/Qwen2.5-1.5B-Instruct-GGUF',
-      revision: 'main',
-      filename: 'qwen3-1.7b-instruct-q4_k_m.gguf',
-      parameterCount: 1700000000,
-      fileSizeBytes: 1268776960, // ~1.18 GB
-      sha256:
-          'c8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5a6c5b9e0f3d2a1c4',
+      id: 'qwen3_1_7b_q4_0',
+      status: BunjiModelStatus.active,
+      name: 'Qwen3 1.7B',
+      provider: 'Qwen',
       tier: BunjiModelTier.quality,
-      minimumRecommendedRamMb: 4096,
+      description:
+          'The highest-quality option in this mobile-oriented catalog for more demanding conversations and reasoning.',
+      shortDescription: 'Higher quality for demanding tasks.',
       recommended: false,
-      highlights: [
-        'Better responses',
-        'Stronger reasoning',
-        'Better for complex tasks',
-        'Requires more memory and storage',
-      ],
+      tags: ['quality', 'reasoning', 'advanced'],
+      parameters: '1.7B',
+      quantization: 'Q4_0',
+      format: 'GGUF',
+      fileName: 'Qwen3-1.7B-Q4_0.gguf',
+      fileSizeBytes: 1380000000,
+      fileSizeDisplay: '1.38 GB',
+      minimumRecommendedRamMb: 4096,
+      huggingFace: HuggingFaceMetadata(
+        repository: 'ggml-org/Qwen3-1.7B-GGUF',
+        revision: 'main',
+        downloadUrl:
+            'https://huggingface.co/ggml-org/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_0.gguf?download=true',
+      ),
+      integrity: ModelIntegrity(
+        sha256: '9a930ffc873dfa105021e05d21bb1e63a155de89d6e4be1b8c2c8f619e1a87b5',
+      ),
     ),
   ];
 }

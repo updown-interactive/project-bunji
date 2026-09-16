@@ -33,6 +33,8 @@ class OnboardingState extends Equatable {
 
   // AI Model data
   final BunjiModel? selectedModel;
+  final List<BunjiModel> onboardingModels;
+  final String? recommendedModelId;
   final BunjiModelDownloadState downloadState;
   final double downloadProgress; // 0.0 to 1.0
   final int downloadedBytes;
@@ -51,6 +53,8 @@ class OnboardingState extends Equatable {
     this.gender,
     this.dob,
     this.selectedModel,
+    this.onboardingModels = const [],
+    this.recommendedModelId,
     this.downloadState = BunjiModelDownloadState.idle,
     this.downloadProgress = 0.0,
     this.downloadedBytes = 0,
@@ -70,6 +74,8 @@ class OnboardingState extends Equatable {
         gender = null,
         dob = null,
         selectedModel = null,
+        onboardingModels = const [],
+        recommendedModelId = null,
         downloadState = BunjiModelDownloadState.idle,
         downloadProgress = 0.0,
         downloadedBytes = 0,
@@ -108,6 +114,8 @@ class OnboardingState extends Equatable {
     String? gender,
     DateTime? dob,
     BunjiModel? selectedModel,
+    List<BunjiModel>? onboardingModels,
+    String? recommendedModelId,
     BunjiModelDownloadState? downloadState,
     double? downloadProgress,
     int? downloadedBytes,
@@ -126,6 +134,8 @@ class OnboardingState extends Equatable {
       gender: gender ?? this.gender,
       dob: dob ?? this.dob,
       selectedModel: selectedModel ?? this.selectedModel,
+      onboardingModels: onboardingModels ?? this.onboardingModels,
+      recommendedModelId: recommendedModelId ?? this.recommendedModelId,
       downloadState: downloadState ?? this.downloadState,
       downloadProgress: downloadProgress ?? this.downloadProgress,
       downloadedBytes: downloadedBytes ?? this.downloadedBytes,
@@ -148,6 +158,8 @@ class OnboardingState extends Equatable {
         gender,
         dob,
         selectedModel,
+        onboardingModels,
+        recommendedModelId,
         downloadState,
         downloadProgress,
         downloadedBytes,
@@ -163,20 +175,36 @@ class OnboardingState extends Equatable {
 class OnboardingViewController extends Cubit<OnboardingState> {
   final DatabaseService? databaseService;
   final BunjiModelManager? modelManager;
+  final BunjiModelRepository? modelRepository;
 
   StreamSubscription<DownloadProgressInfo>? _downloadSub;
 
   OnboardingViewController({
     this.databaseService,
     this.modelManager,
+    this.modelRepository,
   }) : super(const OnboardingState.initial());
 
   DatabaseService get _dbService => databaseService ?? sl<DatabaseService>();
   BunjiModelManager get _modelManager => modelManager ?? sl<BunjiModelManager>();
+  BunjiModelRepository get _repository {
+    if (modelRepository != null) return modelRepository!;
+    if (_modelManager.repository != null) return _modelManager.repository!;
+    if (sl.isRegistered<BunjiModelRepository>()) {
+      return sl<BunjiModelRepository>();
+    }
+    return _FallbackOnboardingRepository(_modelManager);
+  }
 
   /// Initial recovery & evaluation on controller load.
   Future<void> init() async {
-    // 1. Check existing profile in Drift
+    // 1. Resolve onboarding models from catalog repository
+    final onboardingModels = await _repository.getOnboardingModels();
+    final recModel = await _repository.getRecommendedModel() ??
+        (onboardingModels.isNotEmpty ? onboardingModels.first : _modelManager.defaultModel);
+    final recommendedId = _repository.currentCatalog?.defaults.recommendedModelId ?? recModel.id;
+
+    // 2. Check existing profile in Drift
     final profile = await _dbService.getActiveUserProfile();
     if (profile != null && profile.name.trim().isNotEmpty) {
       emit(
@@ -185,20 +213,24 @@ class OnboardingViewController extends Cubit<OnboardingState> {
           gender: profile.gender,
           dob: profile.dob,
           step: 2, // Resume directly at AI Model selection!
-          selectedModel: _modelManager.defaultModel,
+          onboardingModels: onboardingModels,
+          recommendedModelId: recommendedId,
+          selectedModel: recModel,
         ),
       );
     } else {
       emit(
         state.copyWith(
-          selectedModel: _modelManager.defaultModel,
+          onboardingModels: onboardingModels,
+          recommendedModelId: recommendedId,
+          selectedModel: recModel,
         ),
       );
     }
 
-    // 2. Evaluate device suitability for each available model
+    // 3. Evaluate device suitability for each available model
     final suitabilityMap = <String, DeviceModelSuitability>{};
-    for (final model in _modelManager.availableModels) {
+    for (final model in onboardingModels) {
       final suitability =
           await _modelManager.deviceCapabilities.evaluateSuitability(model);
       suitabilityMap[model.id] = suitability;
@@ -463,3 +495,56 @@ class OnboardingViewController extends Cubit<OnboardingState> {
     return super.close();
   }
 }
+
+/// Fallback repository implementation used when BunjiModelRepository is not in GetIt
+/// (e.g., in unit tests initializing OnboardingViewController with a mock manager only).
+class _FallbackOnboardingRepository implements BunjiModelRepository {
+  final BunjiModelManager _manager;
+
+  _FallbackOnboardingRepository(this._manager);
+
+  @override
+  Future<List<BunjiModel>> getAvailableModels() async => _manager.availableModels;
+
+  @override
+  Future<List<BunjiModel>> getOnboardingModels() async => _manager.availableModels;
+
+  @override
+  Future<BunjiModel?> getModel(String id) async {
+    for (final m in _manager.availableModels) {
+      if (m.id == id) return m;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<BunjiModel>> getInstalledModels() async {
+    final installed = <BunjiModel>[];
+    for (final m in _manager.availableModels) {
+      if (await _manager.isInstalled(m.id)) {
+        installed.add(m);
+      }
+    }
+    return installed;
+  }
+
+  @override
+  Future<BunjiModel?> getRecommendedModel() async => _manager.defaultModel;
+
+  @override
+  Future<void> refreshCatalog() async {}
+
+  @override
+  ModelCatalog? get currentCatalog => null;
+
+  @override
+  bool get isUsingRemoteCatalog => false;
+
+  @override
+  CatalogCacheMetadata? get cacheMetadata => null;
+
+  @override
+  ModelManagementRule getRuleForStatus(BunjiModelStatus status) =>
+      const ModelManagementRule();
+}
+

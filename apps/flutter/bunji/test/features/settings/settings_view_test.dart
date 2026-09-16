@@ -146,6 +146,48 @@ class FakeSettingsDatabaseService implements DatabaseService {
   Future<void> setActiveAiModel(String id) async {}
   @override
   Future<int> deleteAiModel(String id) async => 0;
+
+  @override
+  Future<ChatSession?> getChatSession(String id) async => null;
+
+  @override
+  Stream<List<ChatSession>> watchRecentChatSessions({int limit = 50}) =>
+      Stream.value([]);
+
+  @override
+  Future<List<ChatSession>> getRecentChatSessions({int limit = 50}) async => [];
+
+  @override
+  Future<void> saveChatSession(ChatSessionsCompanion session) async {}
+
+  @override
+  Future<void> updateChatSessionTitle(String id, String title) async {}
+
+  @override
+  Future<void> updateChatSessionCover(String id, String coverImagePath) async {}
+
+  @override
+  Future<void> updateChatSessionPin(String id, bool isPinned) async {}
+
+  @override
+  Future<void> deleteChatSession(String id) async {}
+
+  @override
+  Future<List<DbChatMessage>> getChatMessages(String chatId) async => [];
+
+  @override
+  Stream<List<DbChatMessage>> watchChatMessages(String chatId) =>
+      Stream.value([]);
+
+  @override
+  Future<void> saveChatMessage(ChatMessagesCompanion message) async {}
+
+  @override
+  Future<DbChatMessage?> getLatestChatMessage(String chatId) async => null;
+
+  @override
+  Future<DbChatMessage?> getLatestAiChatMessage(String chatId) async => null;
+
   @override
   Future<void> close() async {}
 }

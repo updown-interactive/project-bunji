@@ -4,6 +4,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 class BunjiButton extends StatelessWidget {
   final Widget icon;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final String? title;
   final Color? buttonColor;
   final double? height, width;
@@ -11,7 +12,8 @@ class BunjiButton extends StatelessWidget {
     super.key,
     required this.icon,
     required this.onTap,
-     this.title,
+    this.onLongPress,
+    this.title,
     this.buttonColor,
     this.height = 46,
     this.width = 46,
@@ -20,9 +22,10 @@ class BunjiButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return GlassButton(
+    final btn = GlassButton(
       height: height,
       width: width,
+      useOwnLayer: true,
       settings: LiquidGlassSettings(
         glassColor: buttonColor ?? cs.surfaceContainer.withValues(alpha: 0.5),
       ),
@@ -30,5 +33,14 @@ class BunjiButton extends StatelessWidget {
       onTap: onTap,
       label: title ?? "",
     );
+
+    if (onLongPress != null) {
+      return GestureDetector(
+        onLongPress: onLongPress,
+        child: btn,
+      );
+    }
+
+    return btn;
   }
 }

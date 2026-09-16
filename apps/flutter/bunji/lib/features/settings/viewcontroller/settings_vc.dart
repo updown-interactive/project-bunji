@@ -1,17 +1,32 @@
 import 'dart:async';
 import 'package:bunji/app/di.dart';
 import 'package:bunji/features/settings/viewcontroller/settings_state.dart';
+import 'package:bunji/shared/core/ui.dart';
 import 'package:bunji/shared/services/services.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SettingsViewController extends Cubit<SettingsState> {
   final DatabaseService _databaseService;
+  final BunjiModelRepository? modelRepository;
+  final BunjiModelCatalog? modelCatalog;
+  final BunjiModelManager? modelManager;
   StreamSubscription<UserSetting?>? _settingsSubscription;
 
-  SettingsViewController({DatabaseService? databaseService})
-      : _databaseService = databaseService ?? sl<DatabaseService>(),
+  SettingsViewController({
+    DatabaseService? databaseService,
+    this.modelRepository,
+    this.modelCatalog,
+    this.modelManager,
+  })  : _databaseService = databaseService ?? sl<DatabaseService>(),
         super(const SettingsState.initial());
+
+  BunjiModelRepository get _repository =>
+      modelRepository ?? sl<BunjiModelRepository>();
+  BunjiModelCatalog get _catalog =>
+      modelCatalog ?? sl<BunjiModelCatalog>();
+  BunjiModelManager get _manager =>
+      modelManager ?? sl<BunjiModelManager>();
 
   @override
   Future<void> close() {
@@ -21,6 +36,7 @@ class SettingsViewController extends Cubit<SettingsState> {
 
   /// Initializes settings from the local database and subscribes to changes.
   Future<void> init() async {
+    await _loadCatalogAndModels();
     try {
       final saved = await _databaseService.getUserSettings();
       if (saved != null) {
@@ -32,7 +48,7 @@ class SettingsViewController extends Cubit<SettingsState> {
             id: const Value('default'),
             themeMode: const Value('system'),
             messageDensity: const Value('comfortable'),
-            activeModelId: const Value('qwen3_0_6b'),
+            activeModelId: const Value('qwen3_0_6b_q4_0'),
             responseStyle: const Value('Balanced'),
             reasoningMode: const Value(false),
             streamingTokens: const Value(true),
@@ -162,7 +178,7 @@ class SettingsViewController extends Cubit<SettingsState> {
       activeModelId: Value(modelId),
     ));
     try {
-      await _databaseService.setActiveAiModel(modelId);
+      await _manager.switchActiveModel(modelId);
     } catch (_) {}
   }
 
@@ -339,6 +355,193 @@ class SettingsViewController extends Cubit<SettingsState> {
     await _persist(UserSettingsCompanion(
       developerMode: Value(value),
     ));
+  }
+
+  Future<void> _loadCatalogAndModels() async {
+    try {
+      final available = await _repository.getAvailableModels();
+      final installed = await _repository.getInstalledModels();
+      final active = await _manager.getActiveModel();
+
+      String source = 'Bundled';
+      if (_catalog.isUsingRemoteCatalog) {
+        source = _catalog.cacheMetadata?.source == 'remote' ? 'Remote' : 'Cache';
+      }
+
+      emit(state.copyWith(
+        availableModels: available,
+        installedModels: installed,
+        selectedModelId: active?.id ?? state.selectedModelId,
+        catalogSource: source,
+        catalogVersion: _catalog.current?.catalogVersion ?? '2026-09-14',
+        catalogSchemaVersion: _catalog.current?.schemaVersion ?? 2,
+        catalogStatus: _catalog.current != null ? 'Valid' : 'Uninitialized',
+        catalogLastRefresh: _catalog.lastRefreshTime,
+      ));
+    } catch (e) {
+      emit(state.copyWith(catalogError: e.toString()));
+    }
+  }
+
+  /// Refreshes the remote catalog on demand (Section 32).
+  Future<void> refreshCatalog() async {
+    emit(state.copyWith(isRefreshingCatalog: true, catalogError: null));
+    try {
+      await _catalog.refresh(force: true);
+      await _loadCatalogAndModels();
+      emit(state.copyWith(
+        isRefreshingCatalog: false,
+        ui: state.ui.showSuccess('Catalog refreshed successfully'),
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isRefreshingCatalog: false,
+        catalogError: e.toString(),
+        ui: state.ui.showError('Refresh failed: ${e.toString()}'),
+      ));
+    }
+  }
+
+  /// Clears local catalog cache (Section 32).
+  Future<void> clearCatalogCache() async {
+    await _catalog.clearCache();
+    await _loadCatalogAndModels();
+    emit(state.copyWith(
+      ui: state.ui.showSuccess('Catalog cache cleared'),
+    ));
+  }
+
+  /// Forces reloading bundled catalog from assets (Section 32).
+  Future<void> loadBundledCatalog() async {
+    await _catalog.loadBundledCatalog();
+    await _loadCatalogAndModels();
+    emit(state.copyWith(
+      ui: state.ui.showSuccess('Loaded bundled catalog'),
+    ));
+  }
+
+  /// Validates the current in-memory catalog schema and integrity (Section 32).
+  Future<void> validateCatalog() async {
+    final cat = _catalog.current;
+    if (cat != null && cat.schemaVersion == 2 && cat.models.isNotEmpty) {
+      emit(state.copyWith(
+        catalogStatus: 'Valid (${cat.models.length} models verified)',
+        ui: state.ui.showSuccess('Catalog verified: Schema 2 with ${cat.models.length} models'),
+      ));
+    } else {
+      emit(state.copyWith(
+        catalogStatus: 'Invalid catalog schema',
+        ui: state.ui.showError('Catalog validation failed!'),
+      ));
+    }
+  }
+
+  /// Downloads and installs a model from the remote catalog.
+  Future<void> downloadAndInstallModel(BunjiModel model) async {
+    // Check if another download is in progress
+    if (state.downloadingModelId != null) {
+      emit(state.copyWith(
+        ui: state.ui.showError('Another model download is already in progress.'),
+      ));
+      return;
+    }
+
+    // Check storage availability
+    final hasStorage =
+        await _manager.deviceCapabilities.hasEnoughStorage(model);
+    if (!hasStorage) {
+      emit(state.copyWith(
+        ui: state.ui.showError(
+          'Insufficient storage. This model requires ${model.formattedSize}.',
+        ),
+      ));
+      return;
+    }
+
+    emit(state.copyWith(
+      downloadingModelId: model.id,
+      downloadProgress: 0.0,
+      downloadStatusMessage: 'Preparing download...',
+    ));
+
+    try {
+      final success = await _manager.installModel(
+        model: model,
+        onStepUpdate: (msg) {
+          emit(state.copyWith(downloadStatusMessage: msg));
+        },
+        onProgress: (p) {
+          emit(state.copyWith(downloadProgress: p));
+        },
+      );
+
+      if (success) {
+        await _loadCatalogAndModels();
+        await updateSelectedModel(model.id);
+        emit(state.copyWith(
+          clearDownloadingModelId: true,
+          clearDownloadStatus: true,
+          downloadProgress: 1.0,
+          ui: state.ui.showSuccess('Model "${model.name}" installed and activated!'),
+        ));
+      } else {
+        emit(state.copyWith(
+          clearDownloadingModelId: true,
+          clearDownloadStatus: true,
+          ui: state.ui.showError('Failed to verify or install "${model.name}".'),
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(
+        clearDownloadingModelId: true,
+        clearDownloadStatus: true,
+        ui: state.ui.showError('Download error: ${e.toString()}'),
+      ));
+    }
+  }
+
+  /// Deletes a downloaded model from local storage and database.
+  Future<void> deleteModel(String modelId) async {
+    emit(state.copyWith(deletingModelId: modelId));
+    try {
+      final success = await _manager.deleteModel(modelId);
+      if (success) {
+        // Refresh models list
+        final installed = await _repository.getInstalledModels();
+        String newSelected = state.selectedModelId;
+
+        // If the deleted model was the currently selected model
+        if (state.selectedModelId == modelId) {
+          if (installed.isNotEmpty) {
+            newSelected = installed.first.id;
+            await updateSelectedModel(newSelected);
+          } else {
+            newSelected = '';
+            await _persist(const UserSettingsCompanion(
+              activeModelId: Value(''),
+            ));
+            await _manager.inferenceEngine.unloadModel();
+          }
+        }
+
+        emit(state.copyWith(
+          installedModels: installed,
+          selectedModelId: newSelected,
+          clearDeletingModelId: true,
+          ui: state.ui.showSuccess('Model deleted and storage freed.'),
+        ));
+      } else {
+        emit(state.copyWith(
+          clearDeletingModelId: true,
+          ui: state.ui.showError('Could not delete model.'),
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(
+        clearDeletingModelId: true,
+        ui: state.ui.showError('Delete error: ${e.toString()}'),
+      ));
+    }
   }
 
   Future<void> _persist(UserSettingsCompanion update) async {

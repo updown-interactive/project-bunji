@@ -1,6 +1,7 @@
 import 'package:bunji/features/chat/view/chat_view.dart';
 import 'package:bunji/features/home/view/home_view.dart';
 import 'package:bunji/features/menu/view/menu_view.dart';
+import 'package:bunji/features/models/view/models_view.dart';
 import 'package:bunji/features/onboarding/view/onboarding_view.dart';
 import 'package:bunji/features/onboarding/view/splash_view.dart';
 import 'package:bunji/features/profile/view/profile_view.dart';
@@ -15,7 +16,8 @@ enum Routes {
   menu("/menu", "menu"),
   home("/home", "home"),
   profile("/profile", "profile"),
-  settings("/settings", "settings");
+  settings("/settings", "settings"),
+  models("/models", "models");
 
   final String path, name;
   const Routes(this.path, this.name);
@@ -41,9 +43,10 @@ final _chatRoute = GoRoute(
   path: Routes.chat.path,
   name: Routes.chat.name,
   pageBuilder: (context, state) {
+    final chatId = state.extra as String?;
     return CustomTransitionPage<void>(
       key: state.pageKey,
-      child: const ChatView(),
+      child: ChatView(chatId: chatId),
       transitionDuration: const Duration(milliseconds: 380),
       reverseTransitionDuration: const Duration(milliseconds: 300),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -137,6 +140,14 @@ final _settingsRoute = GoRoute(
   },
 );
 
+final _modelsRoute = GoRoute(
+  path: Routes.models.path,
+  name: Routes.models.name,
+  builder: (context, state) {
+    return const ModelsView();
+  },
+);
+
 final router = GoRouter(
   initialLocation: Routes.splash.path,
   routes: [
@@ -147,5 +158,6 @@ final router = GoRouter(
     _menuRoute,
     _profileRoute,
     _settingsRoute,
+    _modelsRoute,
   ],
 );

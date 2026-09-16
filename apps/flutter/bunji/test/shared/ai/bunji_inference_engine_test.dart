@@ -3,6 +3,8 @@ import 'package:bunji/shared/ai/services/bunji_inference_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('BunjiInferenceEngine Tests', () {
     late BunjiLocalInferenceEngine engine;
     late Directory tempDir;

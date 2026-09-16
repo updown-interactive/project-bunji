@@ -64,6 +64,49 @@ abstract class DatabaseService {
 
   /// Saves or updates user settings.
   Future<void> saveUserSettings(UserSettingsCompanion settings);
+
+  // -------------------------------------------------------------
+  // Chat Sessions & Messages Management
+  // -------------------------------------------------------------
+
+  /// Retrieves a chat session by [id].
+  Future<ChatSession?> getChatSession(String id);
+
+  /// Watches all recent chat sessions, sorted by last update descending.
+  Stream<List<ChatSession>> watchRecentChatSessions({int limit = 50});
+
+  /// Retrieves recent chat sessions.
+  Future<List<ChatSession>> getRecentChatSessions({int limit = 50});
+
+  /// Saves or updates a chat session.
+  Future<void> saveChatSession(ChatSessionsCompanion session);
+
+  /// Updates the title of a chat session.
+  Future<void> updateChatSessionTitle(String id, String title);
+
+  /// Updates the cover image of a chat session.
+  Future<void> updateChatSessionCover(String id, String coverImagePath);
+
+  /// Updates the pinned status of a chat session.
+  Future<void> updateChatSessionPin(String id, bool isPinned);
+
+  /// Deletes a chat session and all its messages.
+  Future<void> deleteChatSession(String id);
+
+  /// Retrieves all messages for a given chat session, sorted chronologically.
+  Future<List<DbChatMessage>> getChatMessages(String chatId);
+
+  /// Watches all messages for a given chat session as a reactive stream.
+  Stream<List<DbChatMessage>> watchChatMessages(String chatId);
+
+  /// Saves a message to the database.
+  Future<void> saveChatMessage(ChatMessagesCompanion message);
+
+  /// Retrieves the latest message for a chat session.
+  Future<DbChatMessage?> getLatestChatMessage(String chatId);
+
+  /// Retrieves the latest AI message for a chat session.
+  Future<DbChatMessage?> getLatestAiChatMessage(String chatId);
 }
 
 /// Concrete implementation of [DatabaseService].
@@ -191,6 +234,144 @@ class DatabaseServiceImpl implements DatabaseService {
   @override
   Future<void> saveUserSettings(UserSettingsCompanion settings) {
     return _db.into(_db.userSettings).insertOnConflictUpdate(settings);
+  }
+
+  // -------------------------------------------------------------
+  // Chat Sessions & Messages Implementation
+  // -------------------------------------------------------------
+
+  @override
+  Future<ChatSession?> getChatSession(String id) {
+    return (_db.select(_db.chatSessions)..where((tbl) => tbl.id.equals(id)))
+        .getSingleOrNull();
+  }
+
+  @override
+  Stream<List<ChatSession>> watchRecentChatSessions({int limit = 50}) {
+    return (_db.select(_db.chatSessions)
+          ..orderBy([
+            (tbl) => OrderingTerm(
+                  expression: tbl.updatedAt,
+                  mode: OrderingMode.desc,
+                ),
+          ])
+          ..limit(limit))
+        .watch();
+  }
+
+  @override
+  Future<List<ChatSession>> getRecentChatSessions({int limit = 50}) {
+    return (_db.select(_db.chatSessions)
+          ..orderBy([
+            (tbl) => OrderingTerm(
+                  expression: tbl.updatedAt,
+                  mode: OrderingMode.desc,
+                ),
+          ])
+          ..limit(limit))
+        .get();
+  }
+
+  @override
+  Future<void> saveChatSession(ChatSessionsCompanion session) {
+    return _db.into(_db.chatSessions).insertOnConflictUpdate(session);
+  }
+
+  @override
+  Future<void> updateChatSessionTitle(String id, String title) {
+    return (_db.update(_db.chatSessions)..where((tbl) => tbl.id.equals(id)))
+        .write(ChatSessionsCompanion(
+      title: Value(title),
+      updatedAt: Value(DateTime.now()),
+    ));
+  }
+
+  @override
+  Future<void> updateChatSessionCover(String id, String coverImagePath) {
+    return (_db.update(_db.chatSessions)..where((tbl) => tbl.id.equals(id)))
+        .write(ChatSessionsCompanion(
+      coverImagePath: Value(coverImagePath),
+      updatedAt: Value(DateTime.now()),
+    ));
+  }
+
+  @override
+  Future<void> updateChatSessionPin(String id, bool isPinned) {
+    return (_db.update(_db.chatSessions)..where((tbl) => tbl.id.equals(id)))
+        .write(ChatSessionsCompanion(
+      isPinned: Value(isPinned),
+      updatedAt: Value(DateTime.now()),
+    ));
+  }
+
+  @override
+  Future<void> deleteChatSession(String id) async {
+    await _db.transaction(() async {
+      await (_db.delete(_db.chatMessages)
+            ..where((tbl) => tbl.chatId.equals(id)))
+          .go();
+      await (_db.delete(_db.chatSessions)..where((tbl) => tbl.id.equals(id)))
+          .go();
+    });
+  }
+
+  @override
+  Future<List<DbChatMessage>> getChatMessages(String chatId) {
+    return (_db.select(_db.chatMessages)
+          ..where((tbl) => tbl.chatId.equals(chatId))
+          ..orderBy([
+            (tbl) => OrderingTerm(
+                  expression: tbl.timestamp,
+                  mode: OrderingMode.asc,
+                ),
+          ]))
+        .get();
+  }
+
+  @override
+  Stream<List<DbChatMessage>> watchChatMessages(String chatId) {
+    return (_db.select(_db.chatMessages)
+          ..where((tbl) => tbl.chatId.equals(chatId))
+          ..orderBy([
+            (tbl) => OrderingTerm(
+                  expression: tbl.timestamp,
+                  mode: OrderingMode.asc,
+                ),
+          ]))
+        .watch();
+  }
+
+  @override
+  Future<void> saveChatMessage(ChatMessagesCompanion message) {
+    return _db.into(_db.chatMessages).insertOnConflictUpdate(message);
+  }
+
+  @override
+  Future<DbChatMessage?> getLatestChatMessage(String chatId) {
+    return (_db.select(_db.chatMessages)
+          ..where((tbl) => tbl.chatId.equals(chatId))
+          ..orderBy([
+            (tbl) => OrderingTerm(
+                  expression: tbl.timestamp,
+                  mode: OrderingMode.desc,
+                ),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  @override
+  Future<DbChatMessage?> getLatestAiChatMessage(String chatId) {
+    return (_db.select(_db.chatMessages)
+          ..where((tbl) => tbl.chatId.equals(chatId) & tbl.sender.equals('ai'))
+          ..orderBy([
+            (tbl) => OrderingTerm(
+                  expression: tbl.timestamp,
+                  mode: OrderingMode.desc,
+                ),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
   }
 
   @override

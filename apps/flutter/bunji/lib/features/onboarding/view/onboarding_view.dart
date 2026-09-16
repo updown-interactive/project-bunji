@@ -565,6 +565,8 @@ class _OnboardingContentState extends State<_OnboardingContent> {
     switch (tier) {
       case BunjiModelTier.fast:
         return Icons.bolt_rounded;
+      case BunjiModelTier.balanced:
+        return Icons.tune_rounded;
       case BunjiModelTier.reasoning:
         return Icons.psychology_rounded;
       case BunjiModelTier.quality:
@@ -579,7 +581,9 @@ class _OnboardingContentState extends State<_OnboardingContent> {
     ColorScheme cs,
     TextTheme tt,
   ) {
-    final availableModels = BunjiModel.availableModels;
+    final availableModels = state.onboardingModels.isNotEmpty
+        ? state.onboardingModels
+        : (state.selectedModel != null ? [state.selectedModel!] : <BunjiModel>[]);
     final leftColModels = <BunjiModel>[];
     final rightColModels = <BunjiModel>[];
 
@@ -980,7 +984,11 @@ class _OnboardingContentState extends State<_OnboardingContent> {
     ColorScheme cs,
     TextTheme tt,
   ) {
-    final model = state.selectedModel ?? BunjiModel.availableModels.first;
+    final model = state.selectedModel ??
+        (state.onboardingModels.isNotEmpty ? state.onboardingModels.first : null);
+    if (model == null) {
+      return const SizedBox();
+    }
     final isFailed = state.downloadState == BunjiModelDownloadState.failed;
     final isPaused = state.downloadState == BunjiModelDownloadState.paused;
 
@@ -1222,7 +1230,11 @@ class _OnboardingContentState extends State<_OnboardingContent> {
     ColorScheme cs,
     TextTheme tt,
   ) {
-    final model = state.selectedModel ?? BunjiModel.availableModels.first;
+    final model = state.selectedModel ??
+        (state.onboardingModels.isNotEmpty ? state.onboardingModels.first : null);
+    if (model == null) {
+      return const SizedBox();
+    }
 
     return Center(
       key: const ValueKey('step_4_ready'),

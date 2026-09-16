@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:bunji/app/di.dart';
 import 'package:bunji/app/routes.dart';
+import 'package:bunji/features/chat/chat.dart';
 import 'package:bunji/features/home/model/tile_item.dart';
 import 'package:bunji/shared/core/ui.dart';
 import 'package:bunji/shared/services/services.dart';
@@ -22,11 +24,11 @@ class HomeState extends Equatable {
   });
 
   const HomeState.initial()
-    : ui = const UI(),
-      isSearching = false,
-      searchQuery = '',
-      items = _defaultItems,
-      isMenuOpen = false;
+      : ui = const UI(),
+        isSearching = false,
+        searchQuery = '',
+        items = const [],
+        isMenuOpen = false;
 
   List<TileItem> get filteredItems {
     if (searchQuery.trim().isEmpty) return items;
@@ -57,61 +59,116 @@ class HomeState extends Equatable {
 
   @override
   List<Object?> get props => [ui, isSearching, searchQuery, items, isMenuOpen];
-
-  static const List<TileItem> _defaultItems = [
-    TileItem(
-      id: '1',
-      timestamp: 'Monday',
-      isPinned: true,
-      title: 'Healthy\n30 Minute\nRecipes',
-      content:
-          'You can prepare a variety of healthy and satisfying meals in under 30 minutes by focus...',
-    ),
-    TileItem(
-      id: '2',
-      timestamp: '9:41 AM',
-      title: 'Mexico City\nLargest Park',
-      imageUrl:
-          'https://images.unsplash.com/photo-1518105779142-d975f22f1b0a?q=80&w=600&auto=format&fit=crop',
-    ),
-    TileItem(
-      id: '3',
-      timestamp: '9:27 AM',
-      title: 'Social Media\nLaunch\nEmail',
-      content:
-          'Here are a few ways you can present solutions to Aga, depending on how you\'d pre...',
-    ),
-    TileItem(
-      id: '4',
-      timestamp: '8:47 AM',
-      title: 'History of\nMotion\nPictures',
-      imageUrl:
-          'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=600&auto=format&fit=crop',
-    ),
-    TileItem(
-      id: '5',
-      timestamp: '8:14 AM',
-      title: 'Chanterelle\nMushrooms',
-      isFullBleed: true,
-      imageUrl:
-          'https://images.unsplash.com/photo-1546882200-a5df6ec17d6a?q=80&w=600&auto=format&fit=crop',
-    ),
-    TileItem(
-      id: '6',
-      timestamp: 'Yesterday',
-      title: 'Rarest\nPigment\nExplanation',
-      imageUrl:
-          'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=600&auto=format&fit=crop',
-    ),
-  ];
 }
 
 class HomeViewController extends Cubit<HomeState> {
   final DatabaseService? databaseService;
+  StreamSubscription<List<ChatSession>>? _sessionsSub;
 
-  HomeViewController({this.databaseService}) : super(const HomeState.initial());
+  HomeViewController({
+    this.databaseService,
+    HomeState? initialState,
+  }) : super(initialState ?? const HomeState.initial()) {
+    if (initialState == null) {
+      _init();
+    }
+  }
 
-  DatabaseService get dbService => databaseService ?? sl<DatabaseService>();
+  DatabaseService? get _db {
+    if (databaseService != null) return databaseService;
+    if (sl.isRegistered<DatabaseService>()) {
+      return sl<DatabaseService>();
+    }
+    return null;
+  }
+
+  void _init() {
+    final db = _db;
+    if (db != null) {
+      _sessionsSub = db.watchRecentChatSessions(limit: 50).listen(_onSessionsUpdated);
+    }
+  }
+
+  Future<void> _onSessionsUpdated(List<ChatSession> sessions) async {
+    if (isClosed) return;
+    final db = _db;
+
+    final newItems = await Future.wait(
+      sessions.map((session) async {
+        // Query latest AI message first; if none, query latest chat message
+        final aiMsg = await db?.getLatestAiChatMessage(session.id);
+        final latestMsg = aiMsg ?? await db?.getLatestChatMessage(session.id);
+
+        // Body must be the first max 20 words of the AI response
+        final snippet = ChatTitleHelper.extractAiSnippet(latestMsg?.content, maxWords: 20);
+        final hasSnippet = snippet != null && snippet.isNotEmpty;
+        final hasCover = session.coverImagePath != null &&
+            session.coverImagePath!.isNotEmpty;
+
+        // Ensure title is never "New Chat" on Home
+        var displayTitle = session.title;
+        if (displayTitle == 'New Chat' || displayTitle.trim().isEmpty) {
+          final fallbackSource = await db?.getLatestChatMessage(session.id);
+          displayTitle = ChatTitleHelper.createIntelligentTitle(fallbackSource?.content ?? '');
+          // Self-heal the database record so it permanently updates
+          unawaited(db?.updateChatSessionTitle(session.id, displayTitle));
+        }
+
+        return TileItem(
+          id: session.id,
+          title: displayTitle,
+          timestamp: _formatTimestamp(session.updatedAt),
+          isPinned: session.isPinned,
+          content: hasSnippet ? snippet : null,
+          imageUrl: hasCover ? session.coverImagePath : null,
+          isFullBleed: hasCover && !hasSnippet,
+        );
+      }),
+    );
+
+    if (isClosed) return;
+    emit(state.copyWith(items: newItems));
+  }
+
+  static String _formatTimestamp(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inDays == 0 && now.day == dt.day) {
+      final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+      final minute = dt.minute.toString().padLeft(2, '0');
+      final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+      return '$hour:$minute $ampm';
+    } else if (diff.inDays <= 1 || (diff.inDays < 2 && now.day != dt.day)) {
+      return 'Yesterday';
+    } else if (diff.inDays < 7) {
+      const days = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday'
+      ];
+      return days[dt.weekday - 1];
+    } else {
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ];
+      return '${months[dt.month - 1]} ${dt.day}';
+    }
+  }
 
   void search() {
     emit(state.copyWith(isSearching: true));
@@ -125,8 +182,24 @@ class HomeViewController extends Cubit<HomeState> {
     emit(state.copyWith(searchQuery: query));
   }
 
+  void openChat(String chatId) {
+    emit(state.copyWith(
+      ui: state.ui.navigateTo(Routes.chat, replace: false, args: chatId),
+    ));
+  }
+
+  Future<void> deleteConversation(String chatId) async {
+    await _db?.deleteChatSession(chatId);
+  }
+
+  Future<void> togglePin(String chatId, bool currentPinned) async {
+    await _db?.updateChatSessionPin(chatId, !currentPinned);
+  }
+
   void goToChat() {
-    emit(state.copyWith(ui: state.ui.navigateTo(Routes.chat, replace: false)));
+    emit(state.copyWith(
+      ui: state.ui.navigateTo(Routes.chat, replace: false, args: null),
+    ));
   }
 
   void goToMenu() {
@@ -142,5 +215,11 @@ class HomeViewController extends Cubit<HomeState> {
 
   void clearAction() {
     emit(state.copyWith(ui: state.ui.clearAction()));
+  }
+
+  @override
+  Future<void> close() {
+    _sessionsSub?.cancel();
+    return super.close();
   }
 }

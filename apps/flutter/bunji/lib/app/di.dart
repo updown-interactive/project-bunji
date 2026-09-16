@@ -1,5 +1,7 @@
 
+import 'package:bunji/features/chat/chat.dart';
 import 'package:bunji/features/home/home.dart';
+import 'package:bunji/features/models/models.dart';
 import 'package:bunji/features/onboarding/onboarding.dart';
 import 'package:bunji/features/settings/settings.dart';
 import 'package:bunji/shared/services/services.dart';
@@ -12,4 +14,6 @@ void inject() {
   registerOnboarding(sl);
   registerHome(sl);
   registerSettings(sl);
+  registerChat(sl);
+  registerModels(sl);
 }

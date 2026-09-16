@@ -14,6 +14,7 @@ void registerOnboarding(GetIt sl) {
     () => OnboardingViewController(
       databaseService: sl<DatabaseService>(),
       modelManager: sl<BunjiModelManager>(),
+      modelRepository: sl<BunjiModelRepository>(),
     ),
   );
 }

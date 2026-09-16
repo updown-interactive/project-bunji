@@ -134,7 +134,29 @@ class HomeView extends StatelessWidget {
                                 children: [
                                   const SizedBox(height: 56),
                                   for (final item in leftColItems) ...[
-                                    TileCard(item: item, onTap: () {}),
+                                    TileCard(
+                                      item: item,
+                                      onTap: () {
+                                        context
+                                            .read<HomeViewController>()
+                                            .openChat(item.id);
+                                      },
+                                      onOpenChat: () {
+                                        context
+                                            .read<HomeViewController>()
+                                            .openChat(item.id);
+                                      },
+                                      onTogglePin: () {
+                                        context
+                                            .read<HomeViewController>()
+                                            .togglePin(item.id, item.isPinned);
+                                      },
+                                      onDeleteConversation: () {
+                                        context
+                                            .read<HomeViewController>()
+                                            .deleteConversation(item.id);
+                                      },
+                                    ),
                                     const SizedBox(height: 14),
                                   ],
                                 ],
@@ -146,7 +168,29 @@ class HomeView extends StatelessWidget {
                               child: Column(
                                 children: [
                                   for (final item in rightColItems) ...[
-                                    TileCard(item: item, onTap: () {}),
+                                    TileCard(
+                                      item: item,
+                                      onTap: () {
+                                        context
+                                            .read<HomeViewController>()
+                                            .openChat(item.id);
+                                      },
+                                      onOpenChat: () {
+                                        context
+                                            .read<HomeViewController>()
+                                            .openChat(item.id);
+                                      },
+                                      onTogglePin: () {
+                                        context
+                                            .read<HomeViewController>()
+                                            .togglePin(item.id, item.isPinned);
+                                      },
+                                      onDeleteConversation: () {
+                                        context
+                                            .read<HomeViewController>()
+                                            .deleteConversation(item.id);
+                                      },
+                                    ),
                                     const SizedBox(height: 14),
                                   ],
                                 ],
@@ -174,28 +218,41 @@ class HomeView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.search_off_rounded,
+              state.isSearching
+                  ? Icons.search_off_rounded
+                  : Icons.chat_bubble_outline_rounded,
               size: 56,
               color: cs.onSurface.withValues(alpha: 0.35),
             ),
             const SizedBox(height: 14),
             Text(
-              'No items found',
+              state.isSearching ? 'No items found' : 'No conversations yet',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: cs.onSurface.withValues(alpha: 0.7),
               ),
             ),
-            if (state.searchQuery.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                'No results matching "${state.searchQuery}"',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: cs.onSurface.withValues(alpha: 0.45),
-                ),
+            const SizedBox(height: 6),
+            Text(
+              state.isSearching
+                  ? 'No results matching "${state.searchQuery}"'
+                  : 'Start a conversation to see your chats here',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: cs.onSurface.withValues(alpha: 0.45),
+              ),
+            ),
+            if (!state.isSearching) ...[
+              const SizedBox(height: 20),
+              BunjiButton(
+                title: 'Start Chat',
+                icon: const Icon(Icons.create),
+                buttonColor: cs.primary,
+                onTap: () {
+                  context.read<HomeViewController>().goToChat();
+                },
               ),
             ],
           ],

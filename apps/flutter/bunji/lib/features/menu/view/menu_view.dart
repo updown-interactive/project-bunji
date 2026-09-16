@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'package:bunji/app/di.dart';
 import 'package:bunji/app/routes.dart';
+import 'package:bunji/shared/services/database/app_database.dart';
+import 'package:bunji/shared/services/database/database_service.dart';
 import 'package:bunji/shared/widgets/button.dart';
 import 'package:bunji/shared/widgets/images.dart';
 import 'package:bunji/shared/widgets/label.dart';
@@ -89,6 +93,7 @@ class MenuView extends StatelessWidget {
                       MenuTile(
                         apptext: .models,
                         icon: Icons.psychology_outlined,
+                        onTap: () => context.push(Routes.models.path),
                       ),
                       const SizedBox(height: 4),
                       MenuTile(apptext: .memory, icon: Icons.cached),
@@ -112,14 +117,61 @@ class MenuView extends StatelessWidget {
                               const SizedBox(height: 16),
                               Label(.recents, style: tt.titleSmall),
                               const SizedBox(height: 4),
-                              ListView.builder(
-                                shrinkWrap: true,
-                                padding: EdgeInsets.zero,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: 3,
-                                itemBuilder: (context, index) {
-                                  return const MenuTile(
-                                    text: 'This is a placeholder',
+                              StreamBuilder<List<ChatSession>>(
+                                stream: sl<DatabaseService>()
+                                    .watchRecentChatSessions(limit: 10),
+                                builder: (context, snapshot) {
+                                  final sessions = snapshot.data ?? [];
+                                  if (sessions.isEmpty) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
+                                      child: Text(
+                                        'No recent conversations yet',
+                                        style: tt.bodySmall?.copyWith(
+                                          color: cs.onSurface.withValues(
+                                            alpha: 0.4,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return Column(
+                                    children: sessions.map((session) {
+                                      final hasCover =
+                                          session.coverImagePath != null &&
+                                          File(
+                                            session.coverImagePath!,
+                                          ).existsSync();
+                                      return MenuTile(
+                                        leading: hasCover
+                                            ? ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                                child: Image.file(
+                                                  File(session.coverImagePath!),
+                                                  width: 20,
+                                                  height: 20,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              )
+                                            : null,
+                                        icon: hasCover
+                                            ? null
+                                            : Icons.chat_bubble_outline_rounded,
+                                        text: session.title,
+                                        onTap: () {
+                                          if (context.canPop()) {
+                                            context.pop();
+                                          }
+                                          context.push(
+                                            Routes.chat.path,
+                                            extra: session.id,
+                                          );
+                                        },
+                                      );
+                                    }).toList(),
                                   );
                                 },
                               ),
@@ -219,9 +271,9 @@ class MenuView extends StatelessWidget {
                 color: Colors.transparent,
                 child: GlassContainer(
                   width: popupWidth,
-                  shape: const LiquidRoundedSuperellipse(borderRadius: 20),
+                  shape: const LiquidRoundedSuperellipse(borderRadius: 40),
                   settings: LiquidGlassSettings(
-                    glassColor: cs.surfaceContainer.withValues(alpha: 0.5),
+                    glassColor: cs.surfaceContainer.withValues(alpha: 0.1),
                   ),
                   padding: const EdgeInsets.symmetric(
                     vertical: 8,
@@ -322,6 +374,7 @@ class MenuView extends StatelessWidget {
 }
 
 class MenuTile extends StatelessWidget {
+  final Widget? leading;
   final IconData? icon;
   final AppText? apptext;
   final String? text;
@@ -329,6 +382,7 @@ class MenuTile extends StatelessWidget {
   final VoidCallback? onTap;
   const MenuTile({
     super.key,
+    this.leading,
     this.icon,
     this.apptext,
     this.text,
@@ -341,10 +395,16 @@ class MenuTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: .symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            if (icon != null) ...[Icon(icon), SizedBox(width: 8)],
+            if (leading != null) ...[
+              leading!,
+              const SizedBox(width: 8),
+            ] else if (icon != null) ...[
+              Icon(icon, size: 20),
+              const SizedBox(width: 8),
+            ],
             if (apptext != null) ...[
               Label(
                 apptext,
@@ -352,9 +412,13 @@ class MenuTile extends StatelessWidget {
               ),
             ],
             if (text != null) ...[
-              Text(
-                text ?? "",
-                style: style ?? Theme.of(context).textTheme.bodyMedium,
+              Expanded(
+                child: Text(
+                  text ?? "",
+                  style: style ?? Theme.of(context).textTheme.bodyMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ],

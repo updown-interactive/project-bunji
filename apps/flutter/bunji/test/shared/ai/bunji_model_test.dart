@@ -18,14 +18,14 @@ void main() {
       expect(fastModel.highlights, isNotEmpty);
     });
 
-    test('verifies Reasoning model (MobileLLM-R1.5 950M) specifications', () {
-      final reasoningModel = BunjiModel.availableModels
-          .firstWhere((m) => m.tier == BunjiModelTier.reasoning);
+    test('verifies Balanced model (Gemma 3 1B) specifications', () {
+      final balancedModel = BunjiModel.availableModels
+          .firstWhere((m) => m.tier == BunjiModelTier.balanced);
 
-      expect(reasoningModel.displayName, equals('MobileLLM-R1.5 950M'));
-      expect(reasoningModel.recommended, isFalse);
-      expect(reasoningModel.formattedSize, contains('MB'));
-      expect(reasoningModel.highlights, isNotEmpty);
+      expect(balancedModel.displayName, equals('Gemma 3 1B'));
+      expect(balancedModel.recommended, isFalse);
+      expect(balancedModel.formattedSize, contains('MB'));
+      expect(balancedModel.highlights, isNotEmpty);
     });
 
     test('verifies Quality model (Qwen3 1.7B) specifications', () {
