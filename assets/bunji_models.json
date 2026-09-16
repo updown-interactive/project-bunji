@@ -1,212 +1,376 @@
 {
-    "schemaVersion": 2,
-    "catalogVersion": "2026-09-14",
-    "catalogStatus": "active",
-    "source": {
-        "name": "Hugging Face",
-        "type": "hugging_face",
-        "managedBy": "Bunji model catalog"
+  "schemaVersion": 3,
+  "catalogVersion": "2026-09-16",
+  "catalogStatus": "active",
+
+  "source": {
+    "name": "Hugging Face",
+    "type": "hugging_face",
+    "managedBy": "Bunji model catalog"
+  },
+
+  "defaults": {
+    "onboardingModelId": "qwen35_0_8b_q4_0",
+    "recommendedModelId": "qwen35_0_8b_q4_0",
+    "defaultInferenceFormat": "GGUF",
+    "defaultRuntime": "llama.cpp"
+  },
+
+  "onboarding": {
+    "enabled": true,
+    "selectionRequired": true,
+    "showDeprecatedModels": false,
+    "modelIds": [
+      "qwen35_0_8b_q4_0",
+      "smollm3_3b_q4_k_m",
+      "qwen35_4b_q4_k_m"
+    ]
+  },
+
+  "catalogPolicy": {
+    "allowDownload": true,
+    "allowUpdate": true,
+    "allowInstallDeprecated": false,
+    "allowInstallDisabled": false,
+    "allowInstallRetired": false,
+    "verifySha256": true,
+    "requireKnownRevision": true,
+    "requireKnownFileSize": true,
+    "requireKnownDownloadUrl": true
+  },
+
+  "models": [
+    {
+      "id": "qwen35_0_8b_q4_0",
+      "status": "active",
+      "visibility": "public",
+
+      "name": "Qwen3.5 0.8B",
+      "provider": "Qwen",
+      "tier": "fast",
+
+      "description": "Ultra-lightweight modern model for fast local conversations, simple tasks and lightweight assistant workloads.",
+      "shortDescription": "Tiny, fast and efficient for everyday local AI.",
+
+      "recommended": true,
+
+      "tags": [
+        "fast",
+        "mobile",
+        "ultra_light",
+        "everyday",
+        "low_memory"
+      ],
+
+      "parameters": "0.8B",
+      "quantization": "Q4_0",
+      "format": "GGUF",
+
+      "fileName": "Qwen3.5-0.8B-Q4_0.gguf",
+      "fileSizeBytes": 563000000,
+      "fileSizeDisplay": "563 MB",
+
+      "minimumRecommendedRamMb": 2048,
+      "recommendedRamMb": 4096,
+
+      "contextLength": 32768,
+
+      "architecture": "qwen35",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+
+      "huggingFace": {
+        "repository": "ggml-org/Qwen3.5-0.8B-GGUF",
+        "revision": "8fea620",
+        "downloadUrl": "https://huggingface.co/ggml-org/Qwen3.5-0.8B-GGUF/resolve/8fea620/Qwen3.5-0.8B-Q4_0.gguf?download=true"
+      },
+
+      "integrity": {
+        "sha256": "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf"
+      },
+
+      "runtime": {
+        "name": "llama.cpp",
+        "minimumVersion": null
+      },
+
+      "capabilities": {
+        "chat": true,
+        "reasoning": true,
+        "coding": true,
+        "multilingual": true,
+        "vision": false,
+        "toolCalling": false
+      },
+
+      "availability": {
+        "android": true,
+        "ios": true,
+        "linux": true,
+        "macos": true,
+        "windows": true
+      }
     },
-    "defaults": {
-        "onboardingModelId": "qwen3_0_6b_q4_0",
-        "recommendedModelId": "qwen3_0_6b_q4_0",
-        "defaultInferenceFormat": "GGUF",
-        "defaultRuntime": "llama.cpp"
+
+    {
+      "id": "smollm3_3b_q4_k_m",
+      "status": "active",
+      "visibility": "public",
+
+      "name": "SmolLM3 3B",
+      "provider": "Hugging Face",
+      "tier": "balanced",
+
+      "description": "A compact 3B instruction model designed for stronger reasoning, multilingual conversations, coding and long-context workloads.",
+      "shortDescription": "Strong small-model reasoning and general-purpose performance.",
+
+      "recommended": true,
+
+      "tags": [
+        "balanced",
+        "reasoning",
+        "coding",
+        "multilingual",
+        "long_context"
+      ],
+
+      "parameters": "3B",
+      "quantization": "Q4_K_M",
+      "format": "GGUF",
+
+      "fileName": "SmolLM3-Q4_K_M.gguf",
+      "fileSizeBytes": 1920000000,
+      "fileSizeDisplay": "1.92 GB",
+
+      "minimumRecommendedRamMb": 4096,
+      "recommendedRamMb": 6144,
+
+      "contextLength": 32768,
+
+      "architecture": "smollm3",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+
+      "huggingFace": {
+        "repository": "ggml-org/SmolLM3-3B-GGUF",
+        "revision": "main",
+        "downloadUrl": "https://huggingface.co/ggml-org/SmolLM3-3B-GGUF/resolve/main/SmolLM3-Q4_K_M.gguf?download=true"
+      },
+
+      "integrity": {
+        "sha256": null
+      },
+
+      "runtime": {
+        "name": "llama.cpp",
+        "minimumVersion": null
+      },
+
+      "capabilities": {
+        "chat": true,
+        "reasoning": true,
+        "coding": true,
+        "multilingual": true,
+        "vision": false,
+        "toolCalling": false,
+        "hybridReasoning": true
+      },
+
+      "availability": {
+        "android": true,
+        "ios": true,
+        "linux": true,
+        "macos": true,
+        "windows": true
+      }
     },
-    "onboarding": {
-        "enabled": true,
-        "selectionRequired": true,
-        "showDeprecatedModels": false,
-        "modelIds": [
-            "qwen3_0_6b_q4_0",
-            "gemma3_1b_it_q4_k_m",
-            "qwen3_1_7b_q4_0"
-        ]
+
+    {
+      "id": "qwen35_4b_q4_k_m",
+      "status": "active",
+      "visibility": "public",
+
+      "name": "Qwen3.5 4B",
+      "provider": "Qwen",
+      "tier": "quality",
+
+      "description": "A significantly stronger local model for demanding conversations, reasoning, coding and multimodal workloads.",
+      "shortDescription": "Powerful 4B local model for demanding tasks.",
+
+      "recommended": false,
+
+      "tags": [
+        "quality",
+        "reasoning",
+        "coding",
+        "advanced",
+        "multimodal",
+        "long_context"
+      ],
+
+      "parameters": "4B",
+      "quantization": "Q4_K_M",
+      "format": "GGUF",
+
+      "fileName": "Qwen3.5-4B-Q4_K_M.gguf",
+      "fileSizeBytes": 2710000000,
+      "fileSizeDisplay": "2.71 GB",
+
+      "minimumRecommendedRamMb": 6144,
+      "recommendedRamMb": 8192,
+
+      "contextLength": 32768,
+
+      "architecture": "qwen35",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+
+      "huggingFace": {
+        "repository": "lmstudio-community/Qwen3.5-4B-GGUF",
+        "revision": "main",
+        "downloadUrl": "https://huggingface.co/lmstudio-community/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf?download=true"
+      },
+
+      "integrity": {
+        "sha256": "25082a7dd3776cc3c741c6347d3bd04523f05796607b3fbc32fa3a25dfa1418c"
+      },
+
+      "runtime": {
+        "name": "llama.cpp",
+        "minimumVersion": null
+      },
+
+      "capabilities": {
+        "chat": true,
+        "reasoning": true,
+        "coding": true,
+        "multilingual": true,
+        "vision": true,
+        "toolCalling": true,
+        "hybridReasoning": true
+      },
+
+      "availability": {
+        "android": true,
+        "ios": true,
+        "linux": true,
+        "macos": true,
+        "windows": true
+      }
     },
-    "catalogPolicy": {
-        "allowDownload": true,
-        "allowUpdate": true,
-        "allowInstallDeprecated": false,
-        "allowInstallDisabled": false,
-        "allowInstallRetired": false,
-        "verifySha256": true,
-        "requireKnownRevision": true
-    },
-    "models": [
-        {
-            "id": "qwen3_0_6b_q4_0",
-            "status": "active",
-            "visibility": "public",
-            "name": "Qwen3 0.6B",
-            "provider": "Qwen",
-            "tier": "fast",
-            "description": "Small and fast model for everyday conversations and tasks.",
-            "shortDescription": "Fast and lightweight for everyday use.",
-            "recommended": true,
-            "tags": [
-                "fast",
-                "mobile",
-                "everyday",
-                "low_memory"
-            ],
-            "parameters": "0.6B",
-            "quantization": "Q4_0",
-            "format": "GGUF",
-            "fileName": "Qwen3-0.6B-Q4_0.gguf",
-            "fileSizeBytes": 429000000,
-            "fileSizeDisplay": "429 MB",
-            "minimumRecommendedRamMb": 2048,
-            "contextLength": 32768,
-            "architecture": "qwen3",
-            "license": "Apache-2.0",
-            "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
-            "huggingFace": {
-                "repository": "ggml-org/Qwen3-0.6B-GGUF",
-                "revision": "main",
-                "downloadUrl": "https://huggingface.co/ggml-org/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_0.gguf?download=true"
-            },
-            "integrity": {
-                "sha256": "da2572f16c06133561ce56accaa822216f2391ef4d37fba427801cd6736417d4"
-            },
-            "runtime": {
-                "name": "llama.cpp",
-                "minimumVersion": null
-            },
-            "availability": {
-                "android": true,
-                "ios": true,
-                "linux": true,
-                "macos": true,
-                "windows": true
-            }
-        },
-        {
-            "id": "gemma3_1b_it_q4_k_m",
-            "status": "active",
-            "visibility": "public",
-            "name": "Gemma 3 1B",
-            "provider": "Google",
-            "tier": "balanced",
-            "description": "A stronger general-purpose model with a good balance of quality and mobile performance.",
-            "shortDescription": "Balanced quality and performance.",
-            "recommended": false,
-            "tags": [
-                "balanced",
-                "mobile",
-                "general"
-            ],
-            "parameters": "1.0B",
-            "quantization": "Q4_K_M",
-            "format": "GGUF",
-            "fileName": "gemma-3-1b-it-Q4_K_M.gguf",
-            "fileSizeBytes": 806000000,
-            "fileSizeDisplay": "806 MB",
-            "minimumRecommendedRamMb": 3072,
-            "contextLength": 32768,
-            "architecture": "gemma3",
-            "license": "Gemma",
-            "licenseUrl": "https://ai.google.dev/gemma/terms",
-            "huggingFace": {
-                "repository": "ggml-org/gemma-3-1b-it-GGUF",
-                "revision": "main",
-                "downloadUrl": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf?download=true"
-            },
-            "integrity": {
-                "sha256": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135"
-            },
-            "runtime": {
-                "name": "llama.cpp",
-                "minimumVersion": null
-            },
-            "availability": {
-                "android": true,
-                "ios": true,
-                "linux": true,
-                "macos": true,
-                "windows": true
-            }
-        },
-        {
-            "id": "qwen3_1_7b_q4_0",
-            "status": "active",
-            "visibility": "public",
-            "name": "Qwen3 1.7B",
-            "provider": "Qwen",
-            "tier": "quality",
-            "description": "The highest-quality option in this mobile-oriented catalog for more demanding conversations and reasoning.",
-            "shortDescription": "Higher quality for demanding tasks.",
-            "recommended": false,
-            "tags": [
-                "quality",
-                "reasoning",
-                "advanced"
-            ],
-            "parameters": "1.7B",
-            "quantization": "Q4_0",
-            "format": "GGUF",
-            "fileName": "Qwen3-1.7B-Q4_0.gguf",
-            "fileSizeBytes": 1230000000,
-            "fileSizeDisplay": "1.23 GB",
-            "minimumRecommendedRamMb": 4096,
-            "contextLength": 32768,
-            "architecture": "qwen3",
-            "license": "Apache-2.0",
-            "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
-            "huggingFace": {
-                "repository": "second-state/Qwen3-1.7B-GGUF",
-                "revision": "main",
-                "downloadUrl": "https://huggingface.co/second-state/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_0.gguf?download=true"
-            },
-            "integrity": {
-                "sha256": "8d3b9a172e9ffc4d025711f84f383062580e0374dfc835d1b266130b69714012"
-            },
-            "runtime": {
-                "name": "llama.cpp",
-                "minimumVersion": null
-            },
-            "availability": {
-                "android": true,
-                "ios": true,
-                "linux": true,
-                "macos": true,
-                "windows": true
-            }
-        }
-    ],
-    "statusDefinitions": {
-        "active": "Available for normal installation and use.",
-        "deprecated": "Kept for existing installations but not offered for new installation.",
-        "disabled": "Temporarily unavailable for new installation or updates.",
-        "retired": "No longer supported; existing installations should migrate."
-    },
-    "managementRules": {
-        "active": {
-            "showInOnboarding": true,
-            "showInModelPicker": true,
-            "allowNewInstall": true,
-            "allowUpdates": true
-        },
-        "deprecated": {
-            "showInOnboarding": false,
-            "showInModelPicker": false,
-            "allowNewInstall": false,
-            "allowUpdates": false,
-            "keepExistingInstallation": true
-        },
-        "disabled": {
-            "showInOnboarding": false,
-            "showInModelPicker": false,
-            "allowNewInstall": false,
-            "allowUpdates": false,
-            "keepExistingInstallation": true
-        },
-        "retired": {
-            "showInOnboarding": false,
-            "showInModelPicker": false,
-            "allowNewInstall": false,
-            "allowUpdates": false,
-            "keepExistingInstallation": false,
-            "migrationRequired": true
-        }
+
+    {
+      "id": "gemma4_e2b_q4_k_m",
+      "status": "active",
+      "visibility": "public",
+
+      "name": "Gemma 4 E2B",
+      "provider": "Google",
+      "tier": "advanced",
+
+      "description": "A newer multimodal Gemma model designed for advanced local workloads including text and visual understanding.",
+      "shortDescription": "Advanced multimodal local AI.",
+
+      "recommended": false,
+
+      "tags": [
+        "advanced",
+        "multimodal",
+        "vision",
+        "reasoning",
+        "long_context"
+      ],
+
+      "parameters": "E2B",
+      "quantization": "Q4_K_M",
+      "format": "GGUF",
+
+      "fileName": "gemma-4-E2B-it-Q4_K_M.gguf",
+      "fileSizeBytes": 3460000000,
+      "fileSizeDisplay": "3.46 GB",
+
+      "minimumRecommendedRamMb": 8192,
+      "recommendedRamMb": 12288,
+
+      "contextLength": 32768,
+
+      "architecture": "gemma4",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://huggingface.co/google/gemma-4-E2B",
+
+      "huggingFace": {
+        "repository": "google/gemma-4-E2B-it-qat-q4_0-gguf",
+        "revision": "main",
+        "downloadUrl": "https://huggingface.co/google/gemma-4-E2B-it-qat-q4_0-gguf/resolve/main/gemma-4-E2B-it-Q4_0.gguf?download=true"
+      },
+
+      "integrity": {
+        "sha256": null
+      },
+
+      "runtime": {
+        "name": "llama.cpp",
+        "minimumVersion": null
+      },
+
+      "capabilities": {
+        "chat": true,
+        "reasoning": true,
+        "coding": true,
+        "multilingual": true,
+        "vision": true,
+        "audio": true,
+        "toolCalling": true
+      },
+
+      "availability": {
+        "android": true,
+        "ios": true,
+        "linux": true,
+        "macos": true,
+        "windows": true
+      }
     }
+  ],
+
+  "statusDefinitions": {
+    "active": "Available for normal installation and use.",
+    "deprecated": "Kept for existing installations but not offered for new installation.",
+    "disabled": "Temporarily unavailable for new installation or updates.",
+    "retired": "No longer supported; existing installations should migrate."
+  },
+
+  "managementRules": {
+    "active": {
+      "showInOnboarding": true,
+      "showInModelPicker": true,
+      "allowNewInstall": true,
+      "allowUpdates": true
+    },
+
+    "deprecated": {
+      "showInOnboarding": false,
+      "showInModelPicker": false,
+      "allowNewInstall": false,
+      "allowUpdates": false,
+      "keepExistingInstallation": true
+    },
+
+    "disabled": {
+      "showInOnboarding": false,
+      "showInModelPicker": false,
+      "allowNewInstall": false,
+      "allowUpdates": false,
+      "keepExistingInstallation": true
+    },
+
+    "retired": {
+      "showInOnboarding": false,
+      "showInModelPicker": false,
+      "allowNewInstall": false,
+      "allowUpdates": false,
+      "keepExistingInstallation": false,
+      "migrationRequired": true
+    }
+  }
 }
